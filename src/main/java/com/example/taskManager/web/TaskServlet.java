@@ -11,6 +11,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 @WebServlet(name = "TaskController", urlPatterns = {
@@ -65,16 +68,27 @@ public class TaskServlet extends HttpServlet {
             throw new ServletException("Database error occurred", ex);
         } catch (NumberFormatException ex) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid task ID format");
+        } catch (ParseException ex) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid date format");
         }
     }
 
     private void listAllTasks(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
-        List<Task> taskList = taskDao.getAllTasks();
+
+        String status = request.getParameter("status");
+        String sort = request.getParameter("sort");
+
+        List<Task> taskList = taskDao.getTasksFilteredAndSorted(status, sort);
+
         request.setAttribute("taskList", taskList);
+        request.setAttribute("selectedStatus", status);
+        request.setAttribute("selectedSort", sort);
+
         RequestDispatcher dispatcher = request.getRequestDispatcher("/task-list.jsp");
         dispatcher.forward(request, response);
     }
+
 
     private void showNewForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -97,32 +111,41 @@ public class TaskServlet extends HttpServlet {
     }
 
     private void insertTask(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException, SQLException {
+            throws ServletException, IOException, SQLException, ParseException {
         String name = request.getParameter("name");
         String status = request.getParameter("status");
+        String dueDateStr = request.getParameter("dueDate");
 
-        if (name == null || name.trim().isEmpty() || status == null || status.trim().isEmpty()) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Task name and status are required");
+        if (name == null || name.trim().isEmpty() ||
+                status == null || status.trim().isEmpty() ||
+                dueDateStr == null || dueDateStr.trim().isEmpty()) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Task name, status, and due date are required");
             return;
         }
 
-        Task newTask = new Task(name.trim(), status.trim());
+        Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
+        Task newTask = new Task(name.trim(), status.trim(), dueDate);
         taskDao.insertTask(newTask);
         response.sendRedirect(request.getContextPath() + "/tasks");
     }
 
     private void updateTask(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
+            throws SQLException, IOException, ParseException {
         int id = Integer.parseInt(request.getParameter("id"));
         String name = request.getParameter("name");
         String status = request.getParameter("status");
+        String dueDateStr = request.getParameter("dueDate");
 
-        if (name == null || name.trim().isEmpty() || status == null || status.trim().isEmpty()) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Task name and status are required");
+        if (name == null || name.trim().isEmpty() ||
+                status == null || status.trim().isEmpty() ||
+                dueDateStr == null || dueDateStr.trim().isEmpty()) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Task name, status, and due date are required");
             return;
         }
 
-        Task task = new Task(id, name.trim(), status.trim());
+        Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
+        Task task = new Task(id, name.trim(), status.trim(), dueDate);
+
         if (!taskDao.updateTask(task)) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Task not found");
             return;
