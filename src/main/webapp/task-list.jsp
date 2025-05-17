@@ -2,7 +2,7 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <html>
 <head>
-    <title>Task Manager</title>
+    <title>NovaTech Solutions</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/styles.css">
 </head>
 <body>
